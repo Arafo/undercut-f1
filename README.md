@@ -296,6 +296,8 @@ There is a global cursor that is controlled with the <kbd>▼</kbd>/<kbd>▲</kb
 
 UndercutF1 can be configured using either a simple `config.json` file, through the command line at startup, or using environment variables. JSON configuration will be loaded from [the appropriate config file path](#default-directories), if it exists.
 
+A JSON Schema file is available in the root of this repository which can help when creating the `config.json` file. Add the JSON `{"$schema": "https://raw.githubusercontent.com/JustAman62/undercut-f1/refs/heads/master/config.schema.json"}"` to your `config.json` to get automatic code complete and validation.
+
 To view what configuration is currently being used, open the <kbd>I</kbd> `Info` screen when the app starts up.
 
 | JSON Path                                     | Command Line                | Environment Variable                                      | Description                                                                                                                                                                               |
