@@ -3,7 +3,7 @@ namespace UndercutF1.Console.ExternalPlayerSync;
 /// <summary>
 /// Options to configure the external player synchronisation service
 /// </summary>
-public sealed record Options
+public sealed record SyncOptions
 {
     /// <summary>
     /// Whether the player sync is enabled or not.
