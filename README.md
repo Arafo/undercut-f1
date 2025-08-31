@@ -26,6 +26,22 @@ Feature Highlights:
 - Lap-by-lap [Timing History](#using-a-cursor-to-view-timing-history-by-lap) to observe gaps over time
 - [Pause the session clock](#external-session-clock-sync) when you pause external video players (such as Kodi), so that your timing screen remains in sync with your feed.
 
+> [!WARNING]
+> Since the 2025 Dutch GP, the F1 Live Timing feed no longer publishes some of the data we need to provide all existing functionality.
+>
+> The following functionality is no longer available during live sessions:
+>
+> - Driver Tracker (live position of each car is unavailable)
+> - DRS Indicator in Timing Screens
+> - Team/Drivers championship tables
+> - Pit Stop times (in box and in pitlane)
+>
+> Importing a session after it finishes still fetches all the data, so all functionality is available if you use undercut-f1 after a race finishes.
+>
+> Efforts to resolve this are being tracked in [issue #74](https://github.com/JustAman62/undercut-f1/issues/74).
+>
+> All other functionality of undercut-f1 remains unaffected.
+
 <!-- omit in toc -->
 ## Table of Contents
 
