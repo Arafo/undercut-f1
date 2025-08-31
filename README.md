@@ -26,6 +26,22 @@ Feature Highlights:
 - Lap-by-lap [Timing History](#using-a-cursor-to-view-timing-history-by-lap) to observe gaps over time
 - [Pause the session clock](#external-session-clock-sync) when you pause external video players (such as Kodi), so that your timing screen remains in sync with your feed.
 
+> [!WARNING]
+> Since the 2025 Dutch GP, the F1 Live Timing feed no longer publishes some of the data we need to provide all existing functionality.
+>
+> The following functionality is no longer available during live sessions:
+>
+> - Driver Tracker (live position of each car is unavailable)
+> - DRS Indicator in Timing Screens
+> - Team/Drivers championship tables
+> - Pit Stop times (in box and in pitlane)
+>
+> Importing a session after it finishes still fetches all the data, so all functionality is available if you use undercut-f1 after a race finishes.
+>
+> Efforts to resolve this are being tracked in [issue #74](https://github.com/JustAman62/undercut-f1/issues/74).
+>
+> All other functionality of undercut-f1 remains unaffected.
+
 <!-- omit in toc -->
 ## Table of Contents
 
@@ -352,8 +368,8 @@ However, the shown keys aren't the only keys which can trigger the action, there
 
 All events received by the live timing client will be written to the configured `Data Directory`, see [see Configuration for details](#configuration). Files will be written to a subdirectory named using the current sessions name, e.g. `<data-directory>/2025_Jeddah_Race/`. In this directory, two files will be written:
 
-- `subscribe.txt` contains the data received at subscription time (i.e. when the live timing client connected to the stream)
-- `live.txt` contains an append-log of every message received in the stream
+- `subscribe.json` contains the data received at subscription time (i.e. when the live timing client connected to the stream)
+- `live.jsonl` contains an append-log of every message received in the stream
 
 Both of these files are required for future simulations/replays. The `IJsonTimingClient` supports loading these files and processing them in the same way live data would be. Data points will be replayed in real time, using an adjustable delay.
 
