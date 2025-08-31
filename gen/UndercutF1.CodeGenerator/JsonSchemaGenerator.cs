@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Schema;
 using Json.More;
 using Json.Schema;
 using Json.Schema.Generation;

@@ -6,8 +6,6 @@ public enum LiveTimingDataType
     CarData,
     Position,
     ExtrapolatedClock,
-    TopThree,
-    RcmSeries,
     TimingStats,
     TimingAppData,
     WeatherData,
@@ -20,6 +18,5 @@ public enum LiveTimingDataType
     TimingData,
     ChampionshipPrediction,
     TeamRadio,
-    TyreStintSeries,
     PitStopSeries,
 }

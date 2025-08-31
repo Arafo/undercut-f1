@@ -7,10 +7,9 @@ namespace UndercutF1.Console;
 public class TyreStintDisplay(
     State state,
     CommonDisplayComponents common,
-    TyreStintSeriesProcessor tyreStintSeries,
     PitStopSeriesProcessor pitStopSeries,
     DriverListProcessor driverList,
-    TimingDataProcessor timingData,
+    TimingAppDataProcessor timingAppData,
     LapCountProcessor lapCount
 ) : IDisplay
 {
@@ -43,14 +42,13 @@ public class TyreStintDisplay(
         };
         var totalLapCount = lapCount.Latest.TotalLaps.GetValueOrDefault();
 
-        foreach (var (driverNumber, line) in timingData.Latest.GetOrderedLines())
+        foreach (var (driverNumber, line) in timingAppData.Latest.GetOrderedLines())
         {
             var driver = driverList.Latest.GetValueOrDefault(driverNumber) ?? new();
-            var stints = tyreStintSeries.Latest.Stints.GetValueOrDefault(driverNumber) ?? [];
             var rowMarkup = DisplayUtils.MarkedUpDriverNumber(driver);
             rowMarkup = $"{line.Line.ToString()?.ToFixedWidth(2)} {rowMarkup} ";
 
-            var (selectedDriverNumber, _) = timingData.Latest.Lines.FirstOrDefault(x =>
+            var (selectedDriverNumber, _) = timingAppData.Latest.Lines.FirstOrDefault(x =>
                 x.Value.Line == state.CursorOffset
             );
 
@@ -61,7 +59,7 @@ public class TyreStintDisplay(
 
             var lineTotalPadLength = 0;
 
-            foreach (var (stintNumber, stint) in stints.OrderBy(x => x.Key))
+            foreach (var (stintNumber, stint) in line.Stints.OrderBy(x => x.Key))
             {
                 var markup = DisplayUtils.GetStyleForTyreCompound(stint.Compound).ToMarkup();
                 var lapsOnThisTyre = (stint.TotalLaps - stint.StartLaps).GetValueOrDefault();
@@ -94,7 +92,7 @@ public class TyreStintDisplay(
 
     private Columns GetStintDetail()
     {
-        var (selectedDriverNumber, _) = timingData.Latest.Lines.FirstOrDefault(x =>
+        var (selectedDriverNumber, line) = timingAppData.Latest.Lines.FirstOrDefault(x =>
             x.Value.Line == state.CursorOffset
         );
         if (selectedDriverNumber is null)
@@ -102,10 +100,8 @@ public class TyreStintDisplay(
             return new Columns();
         }
 
-        var stints = tyreStintSeries.Latest.Stints.GetValueOrDefault(selectedDriverNumber) ?? [];
-
         var columns = new List<Rows>();
-        foreach (var (stintNumber, stint) in stints)
+        foreach (var (stintNumber, stint) in line.Stints)
         {
             var pitStop = pitStopSeries
                 .Latest.PitTimes.GetValueOrDefault(selectedDriverNumber)
@@ -139,6 +135,7 @@ public class TyreStintDisplay(
                 new($"Total Laps  {stint.TotalLaps:D2}"),
                 pitStop is null ? new(" ") : new($"Stop Time  {pitStop?.PitStopTime}"),
                 pitStop is null ? new(" ") : new($"Lane    {pitStop?.PitLaneTime}"),
+                new($"Best  {stint.LapTime}"),
             };
             columns.Add(new Rows(rows).Collapse());
         }

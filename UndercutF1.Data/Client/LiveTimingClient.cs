@@ -37,7 +37,6 @@ public sealed class LiveTimingClient(
         "LapCount",
         "TimingData",
         "TeamRadio",
-        "TyreStintSeries",
         // Only available with subscription?
         "CarData.z",
         "Position.z",
