@@ -24,7 +24,7 @@ public class TimingService(
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
         AllowTrailingCommas = true,
         WriteIndented = false,
-        Converters = { new JsonStringEnumConverter() },
+        Converters = { new JsonStringEnumConverter(), new StringToBoolConverter() },
     };
 
     public ILogger Logger { get; } = logger;
@@ -129,11 +129,6 @@ public class TimingService(
                 obj["RaceControlMessages"]?.ToString(),
                 DateTimeOffset.UtcNow
             );
-            ProcessData(
-                "TyreStintSeries",
-                obj["TyreStintSeries"]?.ToString(),
-                DateTimeOffset.UtcNow
-            );
             ProcessData("PitStopSeries", obj["PitStopSeries"]?.ToString(), DateTimeOffset.UtcNow);
         }
         catch (Exception ex)
@@ -206,6 +201,7 @@ public class TimingService(
                         || line?["Stints"]?.GetValueKind() == JsonValueKind.Object
                     )
                         continue;
+
                     line!["Stints"] = ArrayToIndexedDictionary(line["Stints"]!);
                 }
                 SendToProcessor<TimingAppDataPoint>(json);
@@ -241,31 +237,6 @@ public class TimingService(
                 break;
             case LiveTimingDataType.ChampionshipPrediction:
                 SendToProcessor<ChampionshipPredictionDataPoint>(json);
-                break;
-            case LiveTimingDataType.TyreStintSeries:
-                var tyreStintDrivers = json["Stints"]?.AsObject() ?? [];
-                var driverNumbers = tyreStintDrivers.Select(x => x.Key);
-                foreach (var driverNumber in driverNumbers)
-                {
-                    tyreStintDrivers[driverNumber] = ArrayToIndexedDictionary(
-                        tyreStintDrivers[driverNumber]
-                    );
-
-                    foreach (
-                        var (stintNumber, tyreStint) in tyreStintDrivers[driverNumber]!.AsObject()
-                    )
-                    {
-                        if (tyreStint is null)
-                            continue;
-                        tyreStint["New"] = (string?)tyreStint["New"] switch
-                        {
-                            "true" => true,
-                            "false" => false,
-                            _ => null,
-                        };
-                    }
-                }
-                SendToProcessor<TyreStintSeriesDataPoint>(json);
                 break;
             case LiveTimingDataType.PitStopSeries:
                 var pitStopSeriesDrivers = json["PitTimes"]?.AsObject() ?? [];

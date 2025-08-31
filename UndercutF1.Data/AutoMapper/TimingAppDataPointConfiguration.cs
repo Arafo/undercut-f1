@@ -9,6 +9,12 @@ public class TimingAppDataPointConfiguration : Profile
         CreateMap<TimingAppDataPoint, TimingAppDataPoint>()
             .ForAllMembers(opts => opts.Condition((_, _, member) => member != null));
 
+        CreateMap<TimingAppDataPoint.Driver, TimingAppDataPoint.Driver>()
+            .ForAllMembers(opts => opts.Condition((_, _, member) => member != null));
+
+        CreateMap<TimingAppDataPoint.Driver.Stint, TimingAppDataPoint.Driver.Stint>()
+            .ForAllMembers(opts => opts.Condition((_, _, member) => member != null));
+
         CreateMap<
             Dictionary<string, TimingAppDataPoint.Driver>,
             Dictionary<string, TimingAppDataPoint.Driver>
@@ -20,11 +26,5 @@ public class TimingAppDataPointConfiguration : Profile
             Dictionary<string, TimingAppDataPoint.Driver.Stint>
         >()
             .ConvertUsingDictionaryMerge();
-
-        CreateMap<TimingAppDataPoint.Driver, TimingAppDataPoint.Driver>()
-            .ForAllMembers(opts => opts.Condition((_, _, member) => member != null));
-
-        CreateMap<TimingAppDataPoint.Driver.Stint, TimingAppDataPoint.Driver.Stint>()
-            .ForAllMembers(opts => opts.Condition((_, _, member) => member != null));
     }
 }

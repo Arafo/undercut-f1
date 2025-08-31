@@ -31,7 +31,6 @@ public sealed class DataImporter(
         "TimingData",
         "ChampionshipPrediction",
         "TeamRadio",
-        "TyreStintSeries",
         "PitStopSeries",
     ];
 
@@ -51,7 +50,6 @@ public sealed class DataImporter(
         "SessionData",
         "TimingData",
         "TeamRadio",
-        "TyreStintSeries",
         "PitStopSeries",
     ];
 
