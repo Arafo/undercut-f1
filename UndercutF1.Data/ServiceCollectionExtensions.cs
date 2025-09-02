@@ -31,6 +31,7 @@ public static partial class ServiceCollectionExtensions
             .AddLiveTimingProcessors()
             .AddSingleton<INotifyService, NotifyService>()
             .AddSingleton<ITranscriptionProvider, TranscriptionProvider>()
+            .AddSingleton<Formula1Account>()
             .AddSingleton<IDataImporter, DataImporter>();
 
         collection.AddHttpClient(

@@ -9,6 +9,7 @@ namespace UndercutF1.Data;
 
 public sealed class LiveTimingClient(
     ITimingService timingService,
+    Formula1Account formula1Account,
     ILoggerProvider loggerProvider,
     IOptions<LiveTimingOptions> options,
     ILogger<LiveTimingClient> logger
@@ -56,7 +57,12 @@ public sealed class LiveTimingClient(
         await DisposeConnectionAsync();
 
         Connection = new HubConnectionBuilder()
-            .WithUrl("http://livetiming.formula1.com/signalrcore")
+            .WithUrl(
+                "http://livetiming.formula1.com/signalrcore",
+                configure =>
+                    configure.AccessTokenProvider = () =>
+                        Task.FromResult(formula1Account.AccessToken)
+            )
             .WithAutomaticReconnect()
             .ConfigureLogging(configure => configure.AddProvider(loggerProvider))
             .AddJsonProtocol()

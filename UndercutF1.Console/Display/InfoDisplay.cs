@@ -3,12 +3,14 @@ using Microsoft.Extensions.Options;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using UndercutF1.Console.ExternalPlayerSync;
+using UndercutF1.Data;
 
 namespace UndercutF1.Console;
 
 public sealed class InfoDisplay(
     TerminalInfoProvider terminalInfo,
     WebSocketSynchroniser synchroniser,
+    Formula1Account accountService,
     IOptions<Options> options
 ) : IDisplay
 {
@@ -16,6 +18,7 @@ public sealed class InfoDisplay(
 
     public Task<IRenderable> GetContentAsync()
     {
+        var token = accountService.Payload;
         var content = $"""
             [bold]Configuration[/]
             [bold]Data Directory:[/]        {options.Value.DataDirectory}
@@ -23,10 +26,12 @@ public sealed class InfoDisplay(
             [bold]Audible Notifications:[/] {options.Value.Notify}
             [bold]Verbose Mode:[/]          {options.Value.Verbose}
             [bold]Forced Protocol:[/]       {options.Value.ForceGraphicsProtocol?.ToString() ?? "None"}
+            [bold]F1 TV Account:[/]         {(token is null ? "None" : token.SubscribedProduct ?? "Unknown")}
             [bold]Config Override File:[/]  {File.Exists(
                 Options.ConfigFilePath
             )} ({Options.ConfigFilePath})
             See https://github.com/JustAman62/undercut-f1#configuration for information on how to configure these options.
+            {token}
 
             [bold]Terminal Diagnostics[/]
             [bold]TERM_PROGRAM:[/]        {Environment.GetEnvironmentVariable("TERM_PROGRAM")}

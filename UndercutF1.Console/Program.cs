@@ -146,4 +146,28 @@ imageCommand.SetAction(res =>
 );
 rootCommand.Subcommands.Add(imageCommand);
 
+var loginCommand = new Command(
+    "login",
+    """
+    Login to your Formula 1 account to unlock all feature of undercut-f1.
+    """
+)
+{
+    isVerboseOption,
+};
+loginCommand.SetAction(res => CommandHandler.LoginToFormula1Account(res.GetValue(isVerboseOption)));
+rootCommand.Subcommands.Add(loginCommand);
+
+var logoutCommand = new Command(
+    "logout",
+    """
+    Logout of your Formula 1 account.
+    """
+)
+{
+    isVerboseOption,
+};
+logoutCommand.SetAction(res => CommandHandler.LogoutOfFormula1Account());
+rootCommand.Subcommands.Add(logoutCommand);
+
 await new CommandLineConfiguration(rootCommand).InvokeAsync(args);
