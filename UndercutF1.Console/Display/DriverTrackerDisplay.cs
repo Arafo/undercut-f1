@@ -96,23 +96,44 @@ public class DriverTrackerDisplay : IDisplay
     public Task<IRenderable> GetContentAsync()
     {
         var trackMapMessage = string.Empty;
-        if (
-            !_terminalInfo.IsITerm2ProtocolSupported.Value
-            && !_terminalInfo.IsKittyProtocolSupported.Value
-            && !_terminalInfo.IsSixelSupported.Value
-        )
+        if (!ShouldDrawTrackMap)
         {
-            // We don't think the current terminal supports the iTerm2 graphics protocol
-            trackMapMessage = $"""
-                It seems the current terminal may not support inline graphics, which means we can't show the driver tracker.
-                If you think this is incorrect, please open an issue at https://github.com/JustAman62/undercut-f1. 
-                Include the diagnostic information below:
+            if (!SupportsTerminalGraphics)
+            {
+                // We don't think the current terminal supports the iTerm2 graphics protocol
+                trackMapMessage = $"""
+                    It seems the current terminal may not support inline graphics, which means we can't show the driver tracker.
+                    If you think this is incorrect, please open an issue at https://github.com/JustAman62/undercut-f1. 
+                    Include the diagnostic information below:
 
-                LC_TERMINAL: {Environment.GetEnvironmentVariable("LC_TERMINAL")}
-                TERM: {Environment.GetEnvironmentVariable("TERM")}
-                TERM_PROGRAM: {Environment.GetEnvironmentVariable("TERM_PROGRAM")}
-                """;
+                    LC_TERMINAL: {Environment.GetEnvironmentVariable("LC_TERMINAL")}
+                    TERM: {Environment.GetEnvironmentVariable("TERM")}
+                    TERM_PROGRAM: {Environment.GetEnvironmentVariable("TERM_PROGRAM")}
+                    """;
+            }
+            else if (_sessionInfo.Latest.CircuitPoints.Count == 0)
+            {
+                trackMapMessage = $"""
+                    It seems we were unable to load the data for the circuit map, please exit and try again.
+                    If the issue persists, please raise an issue on GitHub with the diagnostic information below:
+
+                    Circuit Key: {_sessionInfo.Latest.Meeting?.Circuit?.Key}
+                    Circuit:     {_sessionInfo.Latest.Meeting?.Circuit?.ShortName}
+                    Meeting:     {_sessionInfo.Latest.Meeting?.Name}
+                    """;
+            }
+            else if (_positionData.Latest.Position.Last().Timestamp == DateTimeOffset.MinValue)
+            {
+                trackMapMessage = $"""
+                    Unable to find any Car Position data for the current session.
+                    Position data for live sessions now requires an F1 TV subscription.
+                    Login to your F1 TV account using [bold]undercutf1 login[/] to access this data feed.
+
+                    If you face any issues, please raise an issue on GitHub and I'd be happy to assist!
+                    """;
+            }
         }
+
         var driverTower = GetDriverTower();
         var statusPanel = _common.GetStatusPanel();
         var layout = new Layout("Content").SplitColumns(
@@ -129,6 +150,16 @@ public class DriverTrackerDisplay : IDisplay
 
         return Task.FromResult<IRenderable>(layout);
     }
+
+    private bool SupportsTerminalGraphics =>
+        _terminalInfo.IsITerm2ProtocolSupported.Value
+        || _terminalInfo.IsKittyProtocolSupported.Value
+        || _terminalInfo.IsSixelSupported.Value;
+
+    private bool ShouldDrawTrackMap =>
+        SupportsTerminalGraphics
+        && _sessionInfo.Latest.CircuitPoints.Count > 0
+        && _positionData.Latest.Position.Last().Timestamp > DateTimeOffset.MinValue;
 
     private Table GetDriverTower()
     {
@@ -221,14 +252,7 @@ public class DriverTrackerDisplay : IDisplay
 
     private string[] GetTrackMap()
     {
-        if (
-            !(
-                _terminalInfo.IsITerm2ProtocolSupported.Value
-                || _terminalInfo.IsKittyProtocolSupported.Value
-                || _terminalInfo.IsSixelSupported.Value
-            )
-            || _sessionInfo.Latest.CircuitPoints.Count == 0
-        )
+        if (!ShouldDrawTrackMap)
         {
             return [];
         }
