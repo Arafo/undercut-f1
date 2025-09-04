@@ -134,6 +134,7 @@ public static partial class CommandHandler
                 "Writing default configuration file to {Path}",
                 Options.ConfigFilePath
             );
+            Directory.CreateDirectory(Directory.GetParent(Options.ConfigFilePath)!.FullName);
             await File.WriteAllTextAsync(Options.ConfigFilePath, defaultConfigFile);
         }
         catch (Exception ex)
