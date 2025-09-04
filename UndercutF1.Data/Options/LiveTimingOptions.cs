@@ -41,6 +41,13 @@ public record LiveTimingOptions
     public bool Notify { get; set; } = true;
 
     /// <summary>
+    /// The access token that is used in the connection to the SignalR Live Timing service.
+    /// Providing this token allows you to access additional live timing feeds which may be used in some
+    /// features of undercut-f1.
+    /// </summary>
+    public string? Formula1AccessToken { get; set; }
+
+    /// <summary>
     /// Try to conform to Windows/XDG directory standards by default.
     /// <see cref="Environment.SpecialFolder.LocalApplicationData"/> will return <c>%LOCALAPPDATA%</c> on Windows.
     /// On Linux/Mac, we will try to use <c>$XDG_DATA_HOME</c> or <c>~/.local/share</c>.

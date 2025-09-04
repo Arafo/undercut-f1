@@ -1,10 +1,14 @@
 using Spectre.Console;
 using Spectre.Console.Rendering;
+using UndercutF1.Data;
 
 namespace UndercutF1.Console;
 
-public class MainDisplay(IHttpClientFactory httpClientFactory, ILogger<MainDisplay> logger)
-    : IDisplay
+public class MainDisplay(
+    IHttpClientFactory httpClientFactory,
+    Formula1Account accountService,
+    ILogger<MainDisplay> logger
+) : IDisplay
 {
     public Screen Screen => Screen.Main;
 
@@ -23,8 +27,26 @@ public class MainDisplay(IHttpClientFactory httpClientFactory, ILogger<MainDispl
             """
         ).Centered();
 
+        var authStatus = accountService.IsAuthenticated.Value;
+        var payload = accountService.Payload.Value;
+        var accountDetail = authStatus switch
+        {
+            Formula1Account.AuthenticationResult.Success => $"""
+                [green]Logged in to F1 TV account.[/] Token will expire on [bold]{payload!.Expiry:yyyy-MM-dd}[/]
+                """,
+            Formula1Account.AuthenticationResult.ExpiredToken => """
+                [yellow]Formula 1 account token has expired! Please run the following to log back in:[/]
+                [italic]> undercutf1 login[/]
+                """,
+            _ => """
+                [yellow]Some features (like Driver Tracker) require an F1 TV subscription.[/] Run the following to login:
+                [italic]> undercutf1 login[/]
+                See https://github.com/JustAman62/undercut-f1#f1-tv-account-login for details
+                """,
+        };
+
         var content = new Markup(
-            """
+            $"""
             Welcome to [bold italic]Undercut F1[/].
 
             To start a live timing session, press [bold]S[/] then [bold]L[/].
@@ -37,6 +59,8 @@ public class MainDisplay(IHttpClientFactory httpClientFactory, ILogger<MainDispl
 
             You can download old session data from Formula 1 by running:
             [italic]> undercutf1 import[/]
+
+            {accountDetail}
             """
         );
 

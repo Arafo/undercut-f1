@@ -116,36 +116,4 @@ public static partial class CommandHandler
 
         await app.RunAsync();
     }
-
-    private static async Task EnsureConfigFileExistsAsync(ILogger logger)
-    {
-        try
-        {
-            if (File.Exists(Options.ConfigFilePath))
-            {
-                return;
-            }
-            var schemaLocation =
-                "https://raw.githubusercontent.com/JustAman62/undercut-f1/refs/heads/master/config.schema.json";
-            var defaultConfigFile = $$"""
-                {
-                    "$schema": "{{schemaLocation}}"
-                }
-                """;
-
-            logger.LogInformation(
-                "Writing default configuration file to {Path}",
-                Options.ConfigFilePath
-            );
-            await File.WriteAllTextAsync(Options.ConfigFilePath, defaultConfigFile);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Failed to write default configuration file to {Path}",
-                Options.ConfigFilePath
-            );
-        }
-    }
 }

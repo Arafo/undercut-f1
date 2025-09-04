@@ -9,6 +9,7 @@ namespace UndercutF1.Data;
 
 public sealed class LiveTimingClient(
     ITimingService timingService,
+    Formula1Account formula1Account,
     ILoggerProvider loggerProvider,
     IOptions<LiveTimingOptions> options,
     ILogger<LiveTimingClient> logger
@@ -41,7 +42,10 @@ public sealed class LiveTimingClient(
         "CarData.z",
         "Position.z",
         "ChampionshipPrediction",
+        // Not sure if these work now?
         "PitLaneTimeCollection",
+        "PitStopSeries",
+        "PitStop",
     ];
 
     public HubConnection? Connection { get; private set; }
@@ -56,9 +60,18 @@ public sealed class LiveTimingClient(
         await DisposeConnectionAsync();
 
         Connection = new HubConnectionBuilder()
-            .WithUrl("http://livetiming.formula1.com/signalrcore")
+            .WithUrl(
+                "wss://livetiming.formula1.com/signalrcore",
+                configure =>
+                {
+                    configure.AccessTokenProvider = () =>
+                        Task.FromResult(formula1Account.AccessToken.Value);
+                }
+            )
             .WithAutomaticReconnect()
-            .ConfigureLogging(configure => configure.AddProvider(loggerProvider))
+            .ConfigureLogging(configure =>
+                configure.AddProvider(loggerProvider).SetMinimumLevel(LogLevel.Information)
+            )
             .AddJsonProtocol()
             .Build();
 

@@ -5,6 +5,7 @@ using TextCopy;
 using UndercutF1.Console.ExternalPlayerSync;
 using UndercutF1.Console.Graphics;
 using UndercutF1.Data;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace UndercutF1.Console;
 
@@ -111,5 +112,38 @@ public static partial class CommandHandler
         builder.WebHost.UseServer(new NullServer());
 
         return builder;
+    }
+
+    private static async Task EnsureConfigFileExistsAsync(ILogger logger)
+    {
+        try
+        {
+            if (File.Exists(Options.ConfigFilePath))
+            {
+                return;
+            }
+            var schemaLocation =
+                "https://raw.githubusercontent.com/JustAman62/undercut-f1/refs/heads/master/config.schema.json";
+            var defaultConfigFile = $$"""
+                {
+                    "$schema": "{{schemaLocation}}"
+                }
+                """;
+
+            logger.LogInformation(
+                "Writing default configuration file to {Path}",
+                Options.ConfigFilePath
+            );
+            Directory.CreateDirectory(Directory.GetParent(Options.ConfigFilePath)!.FullName);
+            await File.WriteAllTextAsync(Options.ConfigFilePath, defaultConfigFile);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to write default configuration file to {Path}",
+                Options.ConfigFilePath
+            );
+        }
     }
 }
