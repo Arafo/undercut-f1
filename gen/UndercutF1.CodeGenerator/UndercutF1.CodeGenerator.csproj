@@ -8,5 +8,8 @@
   <ItemGroup>
     <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="JsonSchema.Net.Generation" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 </Project>
