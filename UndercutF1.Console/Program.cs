@@ -170,4 +170,15 @@ var logoutCommand = new Command(
 logoutCommand.SetAction(res => CommandHandler.LogoutOfFormula1Account());
 rootCommand.Subcommands.Add(logoutCommand);
 
-await new CommandLineConfiguration(rootCommand).InvokeAsync(args);
+var commandConfiguration = new CommandLineConfiguration(rootCommand);
+var parseResult = commandConfiguration.Parse(args);
+
+if (OperatingSystem.IsWindows() && parseResult.CommandResult.Command.Name == "login")
+{
+    // To allow the login command to spawn a webview, the main threads apartment state must be set to STA.
+    // For some reason, that is only allowed after setting it to Unknown first.
+    Thread.CurrentThread.SetApartmentState(ApartmentState.Unknown);
+    Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
+}
+
+await parseResult.InvokeAsync();
