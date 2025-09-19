@@ -64,6 +64,7 @@ public static class TerminalGraphics
             $"c={width}", // Num rows
             $"f=100" // We'll be sending PNG encoded base64 data
         };
+        var argStr = string.Join(',', args);
 
         return base64EncodedImage
             .Chunk(4000)
@@ -73,14 +74,13 @@ public static class TerminalGraphics
                     {
                         // Start a multi chunk
                         (4000, 0) =>
-                            $"{ESCAPE_APC}{string.Join(',', args)},m=1;{new string(base64Chunk)}{ESCAPE_ST}",
+                            $"{ESCAPE_APC}{argStr},m=1;{new string(base64Chunk)}{ESCAPE_ST}",
                         // Only a single chunk
-                        (_, 0) =>
-                            $"{ESCAPE_APC}{string.Join(',', args)};{new string(base64Chunk)}{ESCAPE_ST}",
+                        (_, 0) => $"{ESCAPE_APC}{argStr};{new string(base64Chunk)}{ESCAPE_ST}",
                         // Middle chunks
-                        (4000, _) => $"{ESCAPE_APC}m=1;{new string(base64Chunk)}{ESCAPE_ST}",
+                        (4000, _) => $"{ESCAPE_APC}q=1,m=1;{new string(base64Chunk)}{ESCAPE_ST}",
                         // Final chunk
-                        (_, _) => $"{ESCAPE_APC}m=0;{new string(base64Chunk)}{ESCAPE_ST}",
+                        (_, _) => $"{ESCAPE_APC}q=1,m=0;{new string(base64Chunk)}{ESCAPE_ST}",
                     }
             )
             .ToArray();

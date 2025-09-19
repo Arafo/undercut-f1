@@ -393,7 +393,11 @@ public class ConsoleLoop(
                 modifiers = ConsoleModifiers.None;
                 return true;
             case [ESC, ..]:
-                logger.LogInformation("Unknown esc sequence: {Seq}", string.Join('|', bytes[1..]));
+                logger.LogInformation(
+                    "Unknown esc sequence: {Seq} ({Str})",
+                    string.Join('|', bytes[1..]),
+                    Util.Sanitize(bytes)
+                );
                 break;
             case [var key, .. var remaining]: // Just a normal key press
                 keyChar = (char)key;
