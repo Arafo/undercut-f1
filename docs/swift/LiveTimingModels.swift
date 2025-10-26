@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Compression)
+import Compression
+#endif
 
 // MARK: - SignalR feed plumbing
 
@@ -48,6 +51,7 @@ public enum LiveTimingEvent {
 /// Helper that maps SignalR envelopes to strongly-typed events.
 public final class LiveTimingFeedMapper {
     private let decoder: JSONDecoder
+    private let normalizer = LiveTimingPayloadNormalizer()
     private let iso8601WithFractionalSeconds = ISO8601DateFormatter()
 
     public init() {
@@ -62,30 +66,34 @@ public final class LiveTimingFeedMapper {
 
     /// Entry point used from the SignalR callback to convert a payload to a Swift model.
     public func map(_ envelope: SignalRFeedEnvelope) throws -> LiveTimingEvent {
+        let normalizedPayload = try normalizer.normalizedPayload(
+            for: envelope.topic,
+            payload: envelope.payload
+        )
         switch envelope.topic {
         case .timingData:
-            let point = try decoder.decode(TimingDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(TimingDataPoint.self, from: normalizedPayload)
             return .timingData(envelope.timestamp, point)
         case .lapCount:
-            let point = try decoder.decode(LapCountDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(LapCountDataPoint.self, from: normalizedPayload)
             return .lapCount(envelope.timestamp, point)
         case .sessionInfo:
-            let point = try decoder.decode(SessionInfoDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(SessionInfoDataPoint.self, from: normalizedPayload)
             return .sessionInfo(envelope.timestamp, point)
         case .driverList:
-            let point = try decoder.decode(DriverListDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(DriverListDataPoint.self, from: normalizedPayload)
             return .driverList(envelope.timestamp, point)
         case .timingAppData:
-            let point = try decoder.decode(TimingAppDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(TimingAppDataPoint.self, from: normalizedPayload)
             return .timingAppData(envelope.timestamp, point)
         case .carData:
-            let point = try decoder.decode(CarDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(CarDataPoint.self, from: normalizedPayload)
             return .carData(envelope.timestamp, point)
         case .position:
-            let point = try decoder.decode(PositionDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(PositionDataPoint.self, from: normalizedPayload)
             return .position(envelope.timestamp, point)
         case .raceControlMessages:
-            let point = try decoder.decode(RaceControlMessageDataPoint.self, from: envelope.payload)
+            let point = try decoder.decode(RaceControlMessageDataPoint.self, from: normalizedPayload)
             return .raceControlMessages(envelope.timestamp, point)
         default:
             return .unhandled(envelope.timestamp, envelope.topic, envelope.payload)
@@ -111,6 +119,209 @@ public final class LiveTimingFeedMapper {
             ?? Date()
 
         return SignalRFeedEnvelope(topic: knownTopic, payload: data, timestamp: timestamp)
+    }
+}
+
+// MARK: - Payload normalization mirroring the .NET TimingService
+
+public enum LiveTimingNormalizationError: Error, LocalizedError {
+    case invalidJSON
+    case invalidBase64
+    case compressionUnavailable
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidJSON:
+            return "Live timing payload could not be parsed as JSON."
+        case .invalidBase64:
+            return "Compressed live timing payload was not valid base64."
+        case .compressionUnavailable:
+            return "Payload decompression requires the Compression framework."
+        }
+    }
+}
+
+/// Matches the JSON pre-processing performed by `TimingService` in the .NET implementation.
+public final class LiveTimingPayloadNormalizer {
+    public init() {}
+
+    public func normalizedPayload(for topic: LiveTimingTopic, payload: Data) throws -> Data {
+        let normalizedObject = try normalize(
+            jsonObject: JSONSerialization.jsonObject(with: payload, options: [.fragmentsAllowed]),
+            for: topic
+        )
+        return try JSONSerialization.data(withJSONObject: normalizedObject, options: [])
+    }
+
+    private func normalize(jsonObject: Any, for topic: LiveTimingTopic) throws -> Any {
+        if let compressed = jsonObject as? String, isCompressedTopic(topic) {
+            let inflated = try inflateBase64String(compressed)
+            let inflatedObject = try JSONSerialization.jsonObject(
+                with: inflated,
+                options: [.fragmentsAllowed]
+            )
+            return try normalize(jsonObject: inflatedObject, for: topic)
+        }
+
+        guard var dict = jsonObject as? [String: Any] else {
+            return jsonObject
+        }
+
+        dict["_kf"] = nil
+
+        switch topic {
+        case .timingData:
+            dict["Lines"] = try normalizeTimingLines(dict["Lines"])
+        case .timingAppData:
+            dict["Lines"] = try normalizeTyreLines(dict["Lines"])
+        case .raceControlMessages:
+            if let normalizedMessages = convertArrayToDictionary(dict["Messages"]) {
+                dict["Messages"] = normalizedMessages
+            }
+        case .teamRadio:
+            if let normalizedCaptures = convertArrayToDictionary(dict["Captures"]) {
+                dict["Captures"] = normalizedCaptures
+            }
+        case .pitStopSeries:
+            dict["PitTimes"] = normalizePitStopSeries(dict["PitTimes"])
+        default:
+            break
+        }
+
+        return dict
+    }
+
+    private func normalizeTimingLines(_ value: Any?) throws -> Any? {
+        guard let rawValue = value else { return nil }
+
+        var lines = convertArrayToDictionary(rawValue) ?? rawValue
+        guard var driverMap = lines as? [String: Any] else {
+            return lines
+        }
+
+        for (driver, details) in driverMap {
+            guard var driverDict = details as? [String: Any] else { continue }
+
+            if let sectors = driverDict["Sectors"] {
+                var normalizedSectors = convertArrayToDictionary(sectors) ?? sectors
+                if var sectorsDict = normalizedSectors as? [String: Any] {
+                    for (sectorKey, sectorValue) in sectorsDict {
+                        guard var sectorDict = sectorValue as? [String: Any] else { continue }
+                        sectorDict["Segments"] = convertArrayToDictionary(sectorDict["Segments"])
+                        sectorsDict[sectorKey] = sectorDict
+                    }
+                    normalizedSectors = sectorsDict
+                }
+                driverDict["Sectors"] = normalizedSectors
+            }
+
+            driverMap[driver] = driverDict
+        }
+
+        return driverMap
+    }
+
+    private func normalizeTyreLines(_ value: Any?) throws -> Any? {
+        guard let rawValue = value else { return nil }
+
+        var lines = convertArrayToDictionary(rawValue) ?? rawValue
+        guard var lineDict = lines as? [String: Any] else {
+            return lines
+        }
+
+        for (driver, entry) in lineDict {
+            guard var tyreEntry = entry as? [String: Any] else { continue }
+            tyreEntry["Stints"] = convertArrayToDictionary(tyreEntry["Stints"])
+            lineDict[driver] = tyreEntry
+        }
+
+        return lineDict
+    }
+
+    private func normalizePitStopSeries(_ value: Any?) -> Any? {
+        guard let rawValue = value else { return nil }
+
+        guard var driverMap = (convertArrayToDictionary(rawValue) ?? rawValue) as? [String: Any] else {
+            return rawValue
+        }
+
+        for (driver, stops) in driverMap {
+            driverMap[driver] = convertArrayToDictionary(stops)
+        }
+
+        return driverMap
+    }
+
+    private func convertArrayToDictionary(_ value: Any?) -> Any? {
+        guard let array = value as? [Any] else { return nil }
+        var dict: [String: Any] = [:]
+        for (index, element) in array.enumerated() {
+            if !(element is NSNull) {
+                dict[String(index)] = element
+            }
+        }
+        return dict
+    }
+
+    private func isCompressedTopic(_ topic: LiveTimingTopic) -> Bool {
+        switch topic {
+        case .carData, .position:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func inflateBase64String(_ value: String) throws -> Data {
+        guard let compressedData = Data(base64Encoded: value) else {
+            throw LiveTimingNormalizationError.invalidBase64
+        }
+
+#if canImport(Compression)
+        let bufferSize = 1 << 14
+        var decompressed = Data()
+        try compressedData.withUnsafeBytes { (compressedPointer: UnsafeRawBufferPointer) in
+            guard let compressedBase = compressedPointer.baseAddress else {
+                throw LiveTimingNormalizationError.invalidBase64
+            }
+
+            var stream = compression_stream()
+            var status = compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB)
+            guard status != COMPRESSION_STATUS_ERROR else {
+                throw LiveTimingNormalizationError.invalidBase64
+            }
+            defer { compression_stream_destroy(&stream) }
+
+            stream.src_ptr = compressedBase.assumingMemoryBound(to: UInt8.self)
+            stream.src_size = compressedData.count
+
+            let dstBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+            defer { dstBuffer.deallocate() }
+
+            repeat {
+                stream.dst_ptr = dstBuffer
+                stream.dst_size = bufferSize
+
+                let flags: Int32 = stream.src_size == 0
+                    ? Int32(COMPRESSION_STREAM_FINALIZE.rawValue)
+                    : 0
+                status = compression_stream_process(&stream, flags)
+
+                let outputSize = bufferSize - stream.dst_size
+                if outputSize > 0 {
+                    decompressed.append(dstBuffer, count: outputSize)
+                }
+            } while status == COMPRESSION_STATUS_OK
+
+            if status != COMPRESSION_STATUS_END {
+                throw LiveTimingNormalizationError.invalidBase64
+            }
+        }
+
+        return decompressed
+#else
+        throw LiveTimingNormalizationError.compressionUnavailable
+#endif
     }
 }
 
