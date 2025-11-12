@@ -418,3 +418,5 @@ config.json
 
 xcuserdata/
 logs/
+# Swift Package Manager
+.build/
