@@ -1,0 +1,10 @@
+import XCTest
+@testable import UndercutF1Data
+
+final class CompressionUtilitiesTests: XCTestCase {
+    func testInflateCarData() throws {
+        let carData = "vZfBbtswDIbfRee0IClSlHwt9gbbZcMOxVBgA4Ycut6CvHsdid7kiXFTA9sliZP8lkj+/Cifwofjy/OPp19h+nIKn16+hSkQEN+B3GH5iDxFnADvWYiJ5XM4hIfH5/nfp4CXl4fvj8fj08/6BYQpicRDoDAVPIQYpvmCwySHIGGC+fPl7Xyu/xi0GgnrL4i5irmKaVRHTy0xVXVuYqpiGLTsaAtCbisDdmJKgxrBkedCLWi8KH5HjTzKvZxJIdu5dOo4it2tM2lbu2hVp6pWZ+vJy1qBZJH3i49pw+ypVZa85U01eWlLALZ1bGmTTo2w0nt+QazlutxA+rzHMXbyHANVC1UJrWLAtjj3Yi/vKlis5tiZNeK4tnployKO4+KYuuhZJmfi1mbaqXEMnL29C0eqat2uuYhXNeKW9FT6pccmTV7OJaeW9kybS6uXNEVpUec4tPjaL9lLWsHFrdS79XKxWn2+wRYJVSmq4pskTGaQ0kfqWNNnmXUGQU/CkQlXSEg9T95FQs5lxQO6ZmufhNlQhhd//iFhuY2EKS47583p4ZNw6UiyrRsJna27JEyZLPK4g4RcPI6OBXNJKJrNmUi7SAhlucGahOME+gckTAYEJOrNOtbcJyGiDU9Im3b1QVi0Va30U58cs7sgRG6WUdwBQmQZQej0qA9C5VaxDDtACGh9grtAyNIqjrGPe6jYJgjpHuPcrpTfBqE1den7Sm8EIRXPW7eCEKTHSUvT6EuXJjmx2bLsAqEsBO+jxjFs/0iYCPpJd5VFPsNtxs5F60DoqF0OEpo5YNuZPgcxLd3cjz10jkUuCIVhBYP3gxAXEMb/DkKNCwi5NyvdBsJ5di6p4z0gtMm7AuGtJ0LW2Pos6Q4QRsu5rh6expT7IJyPhE29/QjhgjCpPW7q9kOfi8Gc7BCNcTWz/5afz1/Prw=="
+        let result = try CompressionUtilities.inflateBase64Data(carData)
+        XCTAssertFalse(result.isEmpty)
+    }
+}
