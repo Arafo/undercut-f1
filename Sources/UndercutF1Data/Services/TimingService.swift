@@ -13,6 +13,11 @@ public actor TimingService {
     private var recent: [QueueItem] = []
     private var processingTask: Task<Void, Never>?
     private let notifyService: NotifyService?
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = []
+        return encoder
+    }()
 
     public init(
         dateTimeProvider: DateTimeProviding = DateTimeProvider(),
@@ -36,6 +41,7 @@ public actor TimingService {
 
     public func enqueue(type: String, data: String?, timestamp: Date) {
         workItems.append(.init(type: type, data: data, timestamp: timestamp))
+        workItems.sort { $0.timestamp < $1.timestamp }
     }
 
     public func getQueueSnapshot() -> [(String, String?, Date)] {
@@ -54,8 +60,9 @@ public actor TimingService {
         let now = Date()
         for topic in LiveTimingClient.topics {
             guard let value = object[topic] else { continue }
-            let payloadData = (try? JSONEncoder().encode(value)).flatMap { String(data: $0, encoding: .utf8) }
-            enqueue(type: topic, data: payloadData, timestamp: now)
+            guard let payloadData = try? encoder.encode(value),
+                  let payloadString = String(data: payloadData, encoding: .utf8) else { continue }
+            enqueue(type: topic, data: payloadString, timestamp: now)
         }
     }
 
@@ -66,7 +73,7 @@ public actor TimingService {
                 continue
             }
 
-        let current = await dateTimeProvider.currentUTC()
+            let current = await dateTimeProvider.currentUTC()
             let delta = first.timestamp.timeIntervalSince(current)
             if delta > 1.0 {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -108,12 +115,98 @@ public actor TimingService {
             return
         }
 
+        let normalized = normalizePayload(type: enumType, payload: payload)
+
         for processor in processors {
-            await processor.process(type: enumType, payload: payload, timestamp: item.timestamp)
+            await processor.process(type: enumType, payload: normalized, timestamp: item.timestamp)
         }
 
         if enumType == .raceControlMessages {
             notifyService?.sendNotification()
         }
+    }
+
+    private func normalizePayload(type: LiveTimingDataType, payload: JSONValue) -> JSONValue {
+        switch type {
+        case .raceControlMessages:
+            guard var root = payload.objectValue else { return payload }
+            if let messages = root["Messages"], let normalized = arrayToIndexedDictionary(messages) {
+                root["Messages"] = normalized
+            }
+            return .object(root)
+        case .timingData:
+            guard var root = payload.objectValue else { return payload }
+            if var lines = root["Lines"]?.objectValue {
+                for (driver, value) in lines {
+                    guard var lineObject = value.objectValue else { continue }
+                    if let sectorsValue = lineObject["Sectors"],
+                       let sectorsDictionary = arrayToIndexedDictionary(sectorsValue)?.objectValue {
+                        var normalizedSectors: [String: JSONValue] = [:]
+                        for (sectorKey, sectorValue) in sectorsDictionary {
+                            if var sectorObject = sectorValue.objectValue {
+                                if let segments = sectorObject["Segments"],
+                                   let normalizedSegments = arrayToIndexedDictionary(segments) {
+                                    sectorObject["Segments"] = normalizedSegments
+                                }
+                                normalizedSectors[sectorKey] = .object(sectorObject)
+                            } else {
+                                normalizedSectors[sectorKey] = sectorValue
+                            }
+                        }
+                        lineObject["Sectors"] = .object(normalizedSectors)
+                    }
+                    lines[driver] = .object(lineObject)
+                }
+                root["Lines"] = .object(lines)
+            }
+            return .object(root)
+        case .timingAppData:
+            guard var root = payload.objectValue else { return payload }
+            if var lines = root["Lines"]?.objectValue {
+                for (driver, value) in lines {
+                    guard var lineObject = value.objectValue else { continue }
+                    if let stints = lineObject["Stints"], let normalized = arrayToIndexedDictionary(stints) {
+                        lineObject["Stints"] = normalized
+                    }
+                    lines[driver] = .object(lineObject)
+                }
+                root["Lines"] = .object(lines)
+            }
+            return .object(root)
+        case .teamRadio:
+            guard var root = payload.objectValue else { return payload }
+            if let captures = root["Captures"], let normalized = arrayToIndexedDictionary(captures) {
+                root["Captures"] = normalized
+            }
+            return .object(root)
+        case .topThree:
+            guard var root = payload.objectValue else { return payload }
+            if let lines = root["Lines"], let normalized = arrayToIndexedDictionary(lines) {
+                root["Lines"] = normalized
+            }
+            return .object(root)
+        case .pitStopSeries:
+            guard var root = payload.objectValue else { return payload }
+            if var pitTimes = root["PitTimes"]?.objectValue {
+                for (driver, value) in pitTimes {
+                    if let normalized = arrayToIndexedDictionary(value) {
+                        pitTimes[driver] = normalized
+                    }
+                }
+                root["PitTimes"] = .object(pitTimes)
+            }
+            return .object(root)
+        default:
+            return payload
+        }
+    }
+
+    private func arrayToIndexedDictionary(_ value: JSONValue) -> JSONValue? {
+        guard case let .array(array) = value else { return value }
+        var dictionary: [String: JSONValue] = [:]
+        for (index, element) in array.enumerated() {
+            dictionary[String(index)] = element
+        }
+        return .object(dictionary)
     }
 }

@@ -7,6 +7,7 @@ public actor LiveTimingClient {
     public static let topics: [String] = [
         "Heartbeat",
         "ExtrapolatedClock",
+        "TopThree",
         "TimingStats",
         "TimingAppData",
         "WeatherData",
@@ -35,15 +36,17 @@ public actor LiveTimingClient {
     private var reconnectTask: Task<Void, Never>?
     private var sessionKey: String = "UnknownSession"
     private var invocationId: String = UUID().uuidString
-    private var backoffSeconds: TimeInterval = 2
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let handshake = "{\"protocol\":\"json\",\"version\":1}\u{1e}"
+    private let pingResponse = "{\"type\":6}\u{1e}"
     private let isoFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
+    private let reconnectSchedule: [TimeInterval] = [0, 2, 10, 30]
+    private var reconnectAttempt: Int = 0
 
     public init(
         timingService: TimingService,
@@ -65,13 +68,7 @@ public actor LiveTimingClient {
     }
 
     public func stop() {
-        receiveTask?.cancel()
-        reconnectTask?.cancel()
-        reconnectTask = nil
-        if let task {
-            task.cancel(with: .goingAway, reason: nil)
-        }
-        task = nil
+        cleanupConnection()
         Task { await timingService.stop() }
     }
 
@@ -93,9 +90,9 @@ public actor LiveTimingClient {
             try await send(text: handshake)
             try await sendSubscribe()
             listen()
-            backoffSeconds = 2
+            reconnectAttempt = 0
         } catch {
-            scheduleReconnect(after: backoffSeconds)
+            scheduleReconnect()
         }
     }
 
@@ -173,9 +170,9 @@ public actor LiveTimingClient {
         case 3:
             try await handleCompletion(envelope)
         case 6:
-            break
+            try await send(text: pingResponse)
         case 7:
-            scheduleReconnect(after: backoffSeconds)
+            scheduleReconnect()
         default:
             break
         }
@@ -199,6 +196,9 @@ public actor LiveTimingClient {
 
     private func handleCompletion(_ message: SignalRMessage) async throws {
         guard message.invocationId == invocationId else { return }
+        if let error = message.error {
+            throw LiveTimingError.subscriptionFailed(error)
+        }
         guard let result = message.result else { return }
         let data = try encoder.encode(result)
         guard let jsonString = String(data: data, encoding: .utf8) else { return }
@@ -271,17 +271,29 @@ public actor LiveTimingClient {
 
     private func handleReceiveError(_ error: Error) async {
         print("Live timing client receive error: \(error)")
-        scheduleReconnect(after: backoffSeconds)
+        scheduleReconnect()
     }
 
-    private func scheduleReconnect(after delay: TimeInterval) {
+    private func scheduleReconnect() {
         reconnectTask?.cancel()
+        cleanupConnection()
+        let index = min(reconnectAttempt, reconnectSchedule.count - 1)
+        let delay = reconnectSchedule[index]
         reconnectTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             await self.establishConnection()
         }
-        backoffSeconds = min(delay * 2, 120)
+        reconnectAttempt = min(reconnectAttempt + 1, reconnectSchedule.count - 1)
+    }
+
+    private func cleanupConnection() {
+        receiveTask?.cancel()
+        receiveTask = nil
+        if let task {
+            task.cancel(with: .goingAway, reason: nil)
+        }
+        task = nil
     }
 }
 
@@ -298,9 +310,11 @@ private struct SignalRMessage: Decodable {
     let arguments: [JSONValue]?
     let invocationId: String?
     let result: JSONValue?
+    let error: String?
 }
 
 public enum LiveTimingError: Error {
     case notConnected
     case encodingFailed
+    case subscriptionFailed(String)
 }
