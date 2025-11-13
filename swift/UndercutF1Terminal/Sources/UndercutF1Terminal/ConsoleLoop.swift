@@ -41,11 +41,10 @@ public final class ConsoleLoop {
 
     public func run(until cancellation: CancellationToken) async {
         await terminalManager.configure()
-        var lastTimestamp = clock()
 
         while !cancellation.isCancelled {
             let frameStart = clock()
-            await terminal.moveCursor(to: .zero)
+            await terminalManager.prepareForNextFrame()
             await inputRouter.pollInput(terminal: terminal, cancellation: cancellation)
 
             if cancellation.isCancelled {
@@ -55,20 +54,22 @@ public final class ConsoleLoop {
             do {
                 let activeDisplay = displayRegistry.activeDisplay()
                 let frame = try await renderFrame(using: activeDisplay)
-                if frame != previousFrame {
-                    if terminal.capabilities.supportsSynchronizedUpdates {
-                        await terminal.beginSynchronizedUpdate()
-                    }
-
-                    await terminal.write(frame)
-                    previousFrame = frame
-
-                    if terminal.capabilities.supportsSynchronizedUpdates {
-                        await terminal.endSynchronizedUpdate()
-                    }
+                let supportsSync = terminal.capabilities.supportsSynchronizedUpdates
+                if supportsSync {
+                    await terminal.beginSynchronizedUpdate()
                 }
 
-                try await activeDisplay.postRender(force: frame != previousFrame, terminal: terminal)
+                let shouldDraw = frame != previousFrame
+                if shouldDraw {
+                    await terminal.write(frame)
+                    previousFrame = frame
+                }
+
+                try await activeDisplay.postRender(force: shouldDraw, terminal: terminal)
+
+                if supportsSync {
+                    await terminal.endSynchronizedUpdate()
+                }
             } catch {
                 await render(error: error)
             }
@@ -83,7 +84,6 @@ public final class ConsoleLoop {
                 slowFrameReports += 1
             }
 
-            lastTimestamp = frameEnd
         }
 
         await shutdownTerminal()

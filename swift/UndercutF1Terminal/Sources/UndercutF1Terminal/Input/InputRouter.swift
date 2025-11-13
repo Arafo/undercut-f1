@@ -25,10 +25,11 @@ public final class InputRouter {
             }
 
             await withTaskGroup(of: Void.self) { group in
-                for handler in applicable where handler.keys.contains(parsed.key) {
+                for handler in applicable {
+                    guard handler.keyBindings.contains(where: { $0.matches(parsed) }) else { continue }
                     group.addTask {
                         for _ in 0..<parsed.repeatCount {
-                            try? await handler.handle(keyInfo: parsed)
+                            try? await handler.handle(keyInfo: parsed, terminal: terminal)
                         }
                     }
                 }
@@ -78,11 +79,41 @@ public final class InputRouter {
         }
 
         if let first = bytes.first {
-            let character = Character(UnicodeScalar(first))
-            let repeats = bytes.filter { $0 == first }.count
-            return KeyInfo(character: character, key: .character, modifiers: [], repeatCount: repeats)
+            switch first {
+            case 3:
+                return KeyInfo(character: nil, key: .controlC, modifiers: [.control], repeatCount: 1)
+            case 8, 127:
+                return KeyInfo(character: nil, key: .backspace, modifiers: [], repeatCount: 1)
+            case 10, 13:
+                return KeyInfo(character: nil, key: .enter, modifiers: [], repeatCount: 1)
+            default:
+                if (1...26).contains(Int(first)) {
+                    let scalarValue = Int(first) + 96
+                    if let scalar = UnicodeScalar(scalarValue) {
+                        let character = Character(scalar)
+                        return KeyInfo(
+                            character: character,
+                            key: .character(character),
+                            modifiers: [.control],
+                            repeatCount: 1
+                        )
+                    }
+                }
+
+                if let scalar = UnicodeScalar(first) {
+                    let character = Character(scalar)
+                    let repeats = bytes.filter { $0 == first }.count
+                    return KeyInfo(
+                        character: character,
+                        key: .character(character),
+                        modifiers: [],
+                        repeatCount: repeats
+                    )
+                }
+            }
         }
 
-        return KeyInfo(character: nil, key: .character, modifiers: [], repeatCount: 1)
+        let value = bytes.first ?? 0
+        return KeyInfo(character: nil, key: .unknown(value), modifiers: [], repeatCount: 1)
     }
 }

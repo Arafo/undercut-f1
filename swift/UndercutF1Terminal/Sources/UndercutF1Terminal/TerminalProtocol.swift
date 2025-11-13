@@ -17,15 +17,27 @@ public protocol TerminalProtocol: AnyObject {
     func write(_ string: String) async
     func write(data: Data) async
     func moveCursor(to position: CursorPosition) async
-    func clearScreen() async
+    func clearScreen(mode: ClearMode) async
+    func clearLine() async
     func setCursorVisible(_ isVisible: Bool) async
-    func useAlternateBuffer() async
-    func useMainBuffer() async
+    func saveCursorPosition() async
+    func restoreCursorPosition() async
+    func setScreenBuffer(_ buffer: ScreenBuffer) async
     func enableRawMode() async
     func disableRawMode() async
     func beginSynchronizedUpdate() async
     func endSynchronizedUpdate() async
     func readInput(maxBytes: Int) async throws -> [UInt8]
+}
+
+public extension TerminalProtocol {
+    func clearScreen() async {
+        await clearScreen(mode: .full)
+    }
+
+    func moveCursor(row: Int, column: Int) async {
+        await moveCursor(to: CursorPosition(row: row, column: column))
+    }
 }
 
 public struct CursorPosition: Equatable {
@@ -67,23 +79,37 @@ public final class SwiftTermAdapter: TerminalProtocol {
     }
 
     public func moveCursor(to position: CursorPosition) async {
-        terminal.cursorPosition = Position(row: position.row, col: position.column)
+        terminal.write(text: TerminalControlSequences.moveCursor(to: position))
     }
 
-    public func clearScreen() async {
-        terminal.clearScreen()
+    public func clearScreen(mode: ClearMode) async {
+        terminal.write(text: TerminalControlSequences.clearScreen(mode))
+    }
+
+    public func clearLine() async {
+        terminal.write(text: TerminalControlSequences.clearLine())
     }
 
     public func setCursorVisible(_ isVisible: Bool) async {
-        terminal.setCursorVisible(isVisible)
+        terminal.write(text: TerminalControlSequences.setCursorVisibility(isVisible))
     }
 
-    public func useAlternateBuffer() async {
-        terminal.useAlternateBuffer()
+    public func saveCursorPosition() async {
+        terminal.write(text: TerminalControlSequences.saveCursorPosition())
     }
 
-    public func useMainBuffer() async {
-        terminal.useMainBuffer()
+    public func restoreCursorPosition() async {
+        terminal.write(text: TerminalControlSequences.restoreCursorPosition())
+    }
+
+    public func setScreenBuffer(_ buffer: ScreenBuffer) async {
+        switch buffer {
+        case .alternate:
+            terminal.useAlternateBuffer()
+        case .main:
+            terminal.useMainBuffer()
+        }
+        terminal.write(text: TerminalControlSequences.setScreenBuffer(buffer))
     }
 
     public func enableRawMode() async {
@@ -96,10 +122,12 @@ public final class SwiftTermAdapter: TerminalProtocol {
 
     public func beginSynchronizedUpdate() async {
         terminal.beginSynchronizedUpdate()
+        terminal.write(text: TerminalControlSequences.beginSynchronizedUpdate())
     }
 
     public func endSynchronizedUpdate() async {
         terminal.endSynchronizedUpdate()
+        terminal.write(text: TerminalControlSequences.endSynchronizedUpdate())
     }
 
     public func readInput(maxBytes: Int) async throws -> [UInt8] {

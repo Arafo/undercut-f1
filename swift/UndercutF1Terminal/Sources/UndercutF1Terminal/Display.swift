@@ -46,11 +46,18 @@ public final class DisplayRegistry {
 }
 
 public final class State {
-    public var currentScreen: Screen
+    public private(set) var previousScreen: Screen
+    public var currentScreen: Screen {
+        didSet {
+            guard currentScreen != oldValue else { return }
+            previousScreen = oldValue
+        }
+    }
     public var cursorOffset: Int
 
     public init(currentScreen: Screen = .main, cursorOffset: Int = 0) {
         self.currentScreen = currentScreen
+        self.previousScreen = currentScreen
         self.cursorOffset = cursorOffset
     }
 }

@@ -23,7 +23,8 @@ public final class CommandFooterRenderer: FooterRenderer {
             }
             .sorted { $0.sortIndex < $1.sortIndex }
             .map { handler in
-                "[\(handler.displayKeys.displayCharacters)] \(handler.description)"
+                let labels = handler.displayBindings.map { $0.displayLabel }.joined(separator: "/")
+                return "[\(labels)] \(handler.description)"
             }
             .map(SimpleTextNode.init)
 

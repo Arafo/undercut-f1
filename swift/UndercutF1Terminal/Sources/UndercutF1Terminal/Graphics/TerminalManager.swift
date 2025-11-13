@@ -11,20 +11,25 @@ public final class TerminalManager {
 
     public func configure() async {
         guard !isConfigured else { return }
-        await adapter.useAlternateBuffer()
+        await adapter.setScreenBuffer(.alternate)
         await adapter.enableRawMode()
         await adapter.setCursorVisible(false)
         await adapter.moveCursor(to: .zero)
-        await adapter.clearScreen()
+        await adapter.clearScreen(mode: .full)
         isConfigured = true
+    }
+
+    public func prepareForNextFrame() async {
+        guard isConfigured else { return }
+        await adapter.moveCursor(to: .zero)
     }
 
     public func restore() async {
         guard isConfigured else { return }
         await adapter.setCursorVisible(true)
         await adapter.disableRawMode()
-        await adapter.clearScreen()
-        await adapter.useMainBuffer()
+        await adapter.clearScreen(mode: .full)
+        await adapter.setScreenBuffer(.main)
         isConfigured = false
     }
 }
