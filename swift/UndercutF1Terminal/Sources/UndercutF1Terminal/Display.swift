@@ -1,4 +1,5 @@
 import Foundation
+import UndercutF1Host
 
 public protocol Display {
     var screen: Screen { get }
@@ -46,10 +47,16 @@ public final class DisplayRegistry {
 }
 
 public final class State {
+    public let services: ApplicationServices
     public var currentScreen: Screen
     public var cursorOffset: Int
 
-    public init(currentScreen: Screen = .main, cursorOffset: Int = 0) {
+    public init(
+        services: ApplicationServices = ApplicationServices(),
+        currentScreen: Screen = .main,
+        cursorOffset: Int = 0
+    ) {
+        self.services = services
         self.currentScreen = currentScreen
         self.cursorOffset = cursorOffset
     }

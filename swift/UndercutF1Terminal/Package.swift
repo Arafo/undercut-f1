@@ -14,13 +14,15 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.0.0")
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.0.0"),
+        .package(path: "../..")
     ],
     targets: [
         .target(
             name: "UndercutF1Terminal",
             dependencies: [
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
+                .product(name: "UndercutF1Host", package: "UndercutF1Swift")
             ],
             path: "Sources/UndercutF1Terminal"
         ),
