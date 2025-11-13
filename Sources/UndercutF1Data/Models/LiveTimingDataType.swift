@@ -3,6 +3,7 @@ import Foundation
 public enum LiveTimingDataType: String, CaseIterable, Sendable {
     case heartbeat = "Heartbeat"
     case extrapolatedClock = "ExtrapolatedClock"
+    case topThree = "TopThree"
     case timingStats = "TimingStats"
     case timingAppData = "TimingAppData"
     case weatherData = "WeatherData"
