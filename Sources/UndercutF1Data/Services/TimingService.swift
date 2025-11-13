@@ -12,16 +12,13 @@ public actor TimingService {
     private var workItems: [QueueItem] = []
     private var recent: [QueueItem] = []
     private var processingTask: Task<Void, Never>?
-    private let notifyService: NotifyService?
 
     public init(
         dateTimeProvider: DateTimeProviding = DateTimeProvider(),
-        processors: [TimingProcessor] = [],
-        notifyService: NotifyService? = nil
+        processors: [TimingProcessor] = []
     ) {
         self.dateTimeProvider = dateTimeProvider
         self.processors = processors
-        self.notifyService = notifyService
     }
 
     public func start() {
@@ -66,7 +63,7 @@ public actor TimingService {
                 continue
             }
 
-        let current = await dateTimeProvider.currentUTC()
+            let current = await dateTimeProvider.currentUTC()
             let delta = first.timestamp.timeIntervalSince(current)
             if delta > 1.0 {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -110,10 +107,6 @@ public actor TimingService {
 
         for processor in processors {
             await processor.process(type: enumType, payload: payload, timestamp: item.timestamp)
-        }
-
-        if enumType == .raceControlMessages {
-            notifyService?.sendNotification()
         }
     }
 }
