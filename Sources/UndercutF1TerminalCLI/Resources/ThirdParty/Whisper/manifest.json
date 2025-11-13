@@ -1,0 +1,18 @@
+{
+  "models": [
+    {
+      "id": "ggml-base.en.bin",
+      "source": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin",
+      "notes": "The Swift port expects fp16 compatible models packaged alongside the executable."
+    },
+    {
+      "id": "ggml-small.en.bin",
+      "source": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin",
+      "notes": "Optional higher-quality transcription model; keep parity with .NET standalone bundles."
+    }
+  ],
+  "postInstall": [
+    "Place downloaded model files next to this manifest before running scripts/swift/stage-dist.sh.",
+    "The staging helper will copy the models into the distribution directory for both macOS and Linux archives."
+  ]
+}

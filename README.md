@@ -258,6 +258,12 @@ cd undercut-f1
 # Run the console project with `dotnet run`
 dotnet run --project UndercutF1.Console/UndercutF1.Console.csproj
 
+# Swift Packaging Preview
+
+An experimental Swift toolchain mirrors the .NET distribution so macOS and Linux builds can ship native binaries. Review
+[`docs/swift-port/swift-packaging.md`](docs/swift-port/swift-packaging.md) for the packaging plan, asset requirements, and the
+`scripts/swift/stage-dist.sh` helper used to stage release candidates.
+
 # Arguments can be provided after the -- argument, for example
 dotnet run --project UndercutF1.Console/UndercutF1.Console.csproj -- import 2025
 ```

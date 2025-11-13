@@ -1,0 +1,2 @@
+The CZlib shim links against libz at runtime. Place the zlib license here during packaging so the binary archive
+mirrors the notices shipped with the .NET distribution.

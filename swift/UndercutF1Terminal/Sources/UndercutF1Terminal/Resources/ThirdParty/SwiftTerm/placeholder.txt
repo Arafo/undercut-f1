@@ -1,0 +1,2 @@
+This placeholder keeps a stable resource path for the SwiftTerm license when packaging the terminal bundle.
+Replace this file with the actual LICENSE text during release staging.

@@ -1,0 +1,2 @@
+Whisper model artifacts are copied beside this placeholder during release packaging.
+Automation should preserve the directory structure when shipping pre-downloaded models.
