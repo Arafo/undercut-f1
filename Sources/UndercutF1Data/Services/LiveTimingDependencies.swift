@@ -7,6 +7,7 @@ public struct LiveTimingDependencies: @unchecked Sendable {
     public let transcriptionProvider: TranscriptionProviding
     public let dateTimeProvider: DateTimeProviding
     public let processors: LiveTimingProcessorCatalog
+    public let snapshotProvider: ProcessorSnapshotProvider
     public let timingService: TimingService
     public let liveTimingClient: LiveTimingClient
     public let formula1Account: Formula1Account?
@@ -42,6 +43,7 @@ public struct LiveTimingDependencies: @unchecked Sendable {
             transcriptionProvider: transcriptionProvider
         )
 
+        snapshotProvider = ProcessorSnapshotProvider(processors: processors.all)
         timingService = TimingService(dateTimeProvider: dateTimeProvider, processors: processors.all)
         liveTimingClient = LiveTimingClient(
             timingService: timingService,

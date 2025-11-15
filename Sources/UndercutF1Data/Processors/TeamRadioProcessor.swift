@@ -4,20 +4,34 @@ public final class TeamRadioProcessor: ProcessorBase<TeamRadioDataPoint> {
     private let sessionInfoProcessor: SessionInfoProcessor
     private let transcriptionProvider: TranscriptionProviding
     private let httpClientFactory: HTTPClientFactory
+    private let notifyService: NotifyService
+    private var newCaptureKeys: Set<String> = []
 
     public init(
         sessionInfoProcessor: SessionInfoProcessor,
         transcriptionProvider: TranscriptionProviding,
-        httpClientFactory: HTTPClientFactory
+        httpClientFactory: HTTPClientFactory,
+        notifyService: NotifyService
     ) {
         self.sessionInfoProcessor = sessionInfoProcessor
         self.transcriptionProvider = transcriptionProvider
         self.httpClientFactory = httpClientFactory
+        self.notifyService = notifyService
         super.init()
     }
 
     public var ordered: [String: TeamRadioDataPoint.Capture] {
         latest.ordered
+    }
+
+    public override func willMerge(update: inout TeamRadioDataPoint, timestamp: Date) async {
+        newCaptureKeys = Set(update.captures.keys.filter { latest.captures[$0] == nil })
+    }
+
+    public override func didMerge(update: TeamRadioDataPoint, timestamp: Date) async {
+        guard !newCaptureKeys.isEmpty else { return }
+        notifyService.sendNotification()
+        newCaptureKeys.removeAll()
     }
 
     public func downloadTeamRadioToFile(key: String) async throws -> URL {

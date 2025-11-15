@@ -65,7 +65,8 @@ public struct LiveTimingProcessorCatalog: @unchecked Sendable {
         teamRadio = TeamRadioProcessor(
             sessionInfoProcessor: sessionInfo,
             transcriptionProvider: transcriptionProvider,
-            httpClientFactory: httpClientFactory
+            httpClientFactory: httpClientFactory,
+            notifyService: notifyService
         )
         timingData = TimingDataProcessor()
         extrapolatedClock = ExtrapolatedClockProcessor(dateTimeProvider: dateTimeProvider)
