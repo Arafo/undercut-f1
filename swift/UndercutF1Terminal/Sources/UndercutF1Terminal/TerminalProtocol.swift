@@ -18,7 +18,7 @@ public protocol TerminalProtocol: AnyObject {
     func write(data: Data) async
     func moveCursor(to position: CursorPosition) async
     func clearScreen(mode: ClearMode) async
-    func clearLine() async
+    func clearLine(mode: LineClearMode) async
     func setCursorVisible(_ isVisible: Bool) async
     func saveCursorPosition() async
     func restoreCursorPosition() async
@@ -35,8 +35,56 @@ public extension TerminalProtocol {
         await clearScreen(mode: .full)
     }
 
+    func clearLine() async {
+        await clearLine(mode: .entire)
+    }
+
     func moveCursor(row: Int, column: Int) async {
         await moveCursor(to: CursorPosition(row: row, column: column))
+    }
+
+    func moveCursor(up rows: Int = 1) async {
+        await write(TerminalControlSequences.moveCursor(up: rows))
+    }
+
+    func moveCursor(down rows: Int = 1) async {
+        await write(TerminalControlSequences.moveCursor(down: rows))
+    }
+
+    func moveCursor(forward columns: Int = 1) async {
+        await write(TerminalControlSequences.moveCursor(forward: columns))
+    }
+
+    func moveCursor(backward columns: Int = 1) async {
+        await write(TerminalControlSequences.moveCursor(backward: columns))
+    }
+
+    func moveCursorToNextLine(_ count: Int = 1) async {
+        await write(TerminalControlSequences.moveCursorToNextLine(count))
+    }
+
+    func moveCursorToPreviousLine(_ count: Int = 1) async {
+        await write(TerminalControlSequences.moveCursorToPreviousLine(count))
+    }
+
+    func moveCursorToColumn(_ column: Int) async {
+        await write(TerminalControlSequences.moveCursorToColumn(column))
+    }
+
+    func scrollUp(_ count: Int = 1) async {
+        await write(TerminalControlSequences.scrollUp(count))
+    }
+
+    func scrollDown(_ count: Int = 1) async {
+        await write(TerminalControlSequences.scrollDown(count))
+    }
+
+    func setWindowTitle(_ title: String) async {
+        await write(TerminalControlSequences.setWindowTitle(title))
+    }
+
+    func ringBell() async {
+        await write(TerminalControlSequences.bell())
     }
 }
 
@@ -86,8 +134,8 @@ public final class SwiftTermAdapter: TerminalProtocol {
         terminal.write(text: TerminalControlSequences.clearScreen(mode))
     }
 
-    public func clearLine() async {
-        terminal.write(text: TerminalControlSequences.clearLine())
+    public func clearLine(mode: LineClearMode) async {
+        terminal.write(text: TerminalControlSequences.clearLine(mode))
     }
 
     public func setCursorVisible(_ isVisible: Bool) async {
