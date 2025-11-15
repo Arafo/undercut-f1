@@ -48,5 +48,10 @@ let package = Package(
             dependencies: ["UndercutF1Data"],
             path: "Tests/UndercutF1DataTests"
         ),
+        .testTarget(
+            name: "UndercutF1CLITests",
+            dependencies: ["UndercutF1CLI"],
+            path: "Tests/UndercutF1CLITests"
+        ),
     ]
 )
