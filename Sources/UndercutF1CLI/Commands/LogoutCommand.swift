@@ -12,7 +12,18 @@ struct LogoutCommand: AsyncParsableCommand {
 
     func run() async throws {
         let builder = ServiceContainerBuilder()
-        let services = builder.bootstrap(commandLine: global.asConsoleOptions())
-        services.logger.notice("Logout flow is not yet implemented in Swift. Remove the token from the config file manually.")
+        builder.ensureConfigFileExists()
+        _ = builder.bootstrap(commandLine: global.asConsoleOptions())
+
+        Swift.print("Logging out will remove your access token stored in the config file.")
+        Swift.print("To log back in again in the future, simply run undercutf1 login.")
+        Swift.print()
+
+        let configStore = ConfigFileStore()
+        var config = try configStore.load()
+        config.removeValue(forKey: "formula1AccessToken")
+        try configStore.save(config)
+
+        Swift.print("Logout successful. Your token has been removed from \(configStore.pathDescription).")
     }
 }
