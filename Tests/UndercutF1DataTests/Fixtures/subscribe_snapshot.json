@@ -1,0 +1,25 @@
+{
+  "Heartbeat": { "Utc": "2024-05-04T20:00:00Z" },
+  "DriverList": {
+    "Drivers": {
+      "1": { "RacingNumber": "1", "BroadcastName": "VER" }
+    }
+  },
+  "TimingData": {
+    "Lines": {
+      "1": { "Line": 1, "GapToLeader": "+0.000" }
+    }
+  },
+  "TimingStats": {
+    "Lines": {
+      "1": { "BestLapTime": "1:18.123" }
+    }
+  },
+  "CarData.z": "VGVzdENhckRhdGE=",
+  "Position.z": "VGVzdFBvc2l0aW9uRGF0YQ==",
+  "TeamRadio": {
+    "Messages": [
+      { "Id": "1", "Transcription": "Box, box" }
+    ]
+  }
+}

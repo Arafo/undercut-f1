@@ -9,16 +9,19 @@ public actor TimingService {
 
     private let dateTimeProvider: DateTimeProviding
     private let processors: [TimingProcessor]
+    private let clock: () -> Date
     private var workItems: [QueueItem] = []
     private var recent: [QueueItem] = []
     private var processingTask: Task<Void, Never>?
 
     public init(
         dateTimeProvider: DateTimeProviding = DateTimeProvider(),
-        processors: [TimingProcessor] = []
+        processors: [TimingProcessor] = [],
+        clock: @escaping () -> Date = Date.init
     ) {
         self.dateTimeProvider = dateTimeProvider
         self.processors = processors
+        self.clock = clock
     }
 
     public func start() {
@@ -39,6 +42,10 @@ public actor TimingService {
         recent.map { ($0.type, $0.data, $0.timestamp) }
     }
 
+    public func snapshotPendingItems() -> [(String, String?, Date)] {
+        workItems.map { ($0.type, $0.data, $0.timestamp) }
+    }
+
     public func getRemainingWorkItems() -> Int {
         workItems.count
     }
@@ -48,7 +55,7 @@ public actor TimingService {
             return
         }
 
-        let now = Date()
+        let now = clock()
         for topic in LiveTimingClient.topics {
             guard let value = object[topic] else { continue }
             let payloadData = (try? JSONEncoder().encode(value)).flatMap { String(data: $0, encoding: .utf8) }
