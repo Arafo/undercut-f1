@@ -12,4 +12,13 @@ final class LayoutTests: XCTestCase {
         table.render(into: &buffer)
         XCTAssertTrue(buffer.contains("Hi   42"))
     }
+
+    func testErrorPanelIncludesFooterSpacing() {
+        struct DummyError: Error {}
+        var buffer = ""
+        let panel = ErrorPanel(error: DummyError(), footerHeight: 2, screen: .logs)
+        panel.render(into: &buffer)
+        XCTAssertTrue(buffer.contains("logs"))
+        XCTAssertTrue(buffer.hasSuffix("\r\n\r\n\r\n"))
+    }
 }

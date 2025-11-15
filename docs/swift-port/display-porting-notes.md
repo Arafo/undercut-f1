@@ -4,6 +4,7 @@ The Swift target introduces dedicated renderers for the highest-traffic screens 
 
 | Screen | Swift Display | Status | Notes |
 | --- | --- | --- | --- |
+| Main | `MainDisplay` | ✅ Ported | Renders ASCII banner, onboarding instructions, and version/update notices. |
 | Timing Tower | `TimingTowerDisplay` | ✅ Ported | Produces race/non-race tables, status, and race control panels using `TimingTowerDataProvider`. |
 | Logs | `LogDisplay` | ✅ Ported | Mirrors pagination, log level filtering, and cursor offset behaviour. |
 | Timing History | `TimingHistoryDisplay` | ⏳ Pending | Requires charting primitives mirroring Spectre sparkline output. |
