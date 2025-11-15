@@ -58,16 +58,19 @@ public final class WhisperTranscriptionProvider: TranscriptionProviding, @unchec
         let directory = modelPath.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-        let (data, _) = try await URLSession.shared.data(from: downloadURL)
         let tempURL = directory.appendingPathComponent(UUID().uuidString)
         guard FileManager.default.createFile(atPath: tempURL.path, contents: nil) else {
             throw TranscriptionError.downloadFailed
         }
+
         let handle = try FileHandle(forWritingTo: tempURL)
         downloadedBytes = 0
         do {
-            try handle.write(contentsOf: data)
-            downloadedBytes = Int64(data.count)
+            let (bytes, _) = try await URLSession.shared.bytes(from: downloadURL)
+            for try await chunk in bytes {
+                downloadedBytes += Int64(chunk.count)
+                try handle.write(contentsOf: chunk)
+            }
             try handle.close()
             if FileManager.default.fileExists(atPath: modelPath.path) {
                 try FileManager.default.removeItem(at: modelPath)
@@ -84,6 +87,12 @@ public final class WhisperTranscriptionProvider: TranscriptionProviding, @unchec
 
     public func transcribe(from file: URL) async throws -> String {
         try await ensureModelDownloaded()
+
+        let cacheURL = try cachedTranscriptURL(for: file)
+        if FileManager.default.fileExists(atPath: cacheURL.path) {
+            return try String(contentsOf: cacheURL)
+        }
+
         let wavURL = file.appendingPathExtension("wav")
         if !FileManager.default.fileExists(atPath: wavURL.path) {
             try runCommand(ffmpegCommand, arguments: ["-y", "-i", file.path, "-ar", "16000", wavURL.path])
@@ -110,6 +119,7 @@ public final class WhisperTranscriptionProvider: TranscriptionProviding, @unchec
             throw TranscriptionError.transcriptionFailed("No transcript produced")
         }
         let text = try String(contentsOf: transcriptURL)
+        try persistTranscript(text, to: cacheURL)
         return text
     }
 
@@ -137,5 +147,20 @@ public final class WhisperTranscriptionProvider: TranscriptionProviding, @unchec
             let output = String(data: data, encoding: .utf8) ?? ""
             throw TranscriptionError.transcriptionFailed(output)
         }
+    }
+
+    private func cachedTranscriptURL(for file: URL) throws -> URL {
+        let cacheDirectory = options.dataDirectory.appendingPathComponent("transcripts", isDirectory: true)
+        try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        let identifier = Data(file.path.utf8).base64EncodedString()
+            .replacingOccurrences(of: "=", with: "")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "+", with: "-")
+        return cacheDirectory.appendingPathComponent(identifier).appendingPathExtension("txt")
+    }
+
+    private func persistTranscript(_ text: String, to url: URL) throws {
+        let data = text.data(using: .utf8) ?? Data()
+        try data.write(to: url, options: [.atomic])
     }
 }

@@ -85,4 +85,22 @@ struct ConfigurationLoader {
         let data = try JSONSerialization.data(withJSONObject: template, options: [.prettyPrinted])
         try data.write(to: configPath, options: [.atomic])
     }
+
+    func readConfigDictionary() -> [String: Any] {
+        let configPath = defaults.defaultConfigFile
+        guard fileManager.fileExists(atPath: configPath.path) else { return [:] }
+        do {
+            let data = try Data(contentsOf: configPath)
+            let object = try JSONSerialization.jsonObject(with: data, options: [])
+            return object as? [String: Any] ?? [:]
+        } catch {
+            return [:]
+        }
+    }
+
+    func writeConfigDictionary(_ dictionary: [String: Any]) throws {
+        let configPath = defaults.defaultConfigFile
+        let data = try JSONSerialization.data(withJSONObject: dictionary, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: configPath, options: [.atomic])
+    }
 }

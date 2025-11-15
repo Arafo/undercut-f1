@@ -20,7 +20,13 @@ public struct LiveTimingDependencies: @unchecked Sendable {
         transcriptionProviderFactory: ((LiveTimingOptions) -> TranscriptionProviding)? = nil
     ) {
         self.options = options
-        self.formula1Account = formula1Account
+        if let formula1Account {
+            self.formula1Account = formula1Account
+        } else if let token = options.formula1AccessToken, let account = Formula1Account(token: token) {
+            self.formula1Account = account
+        } else {
+            self.formula1Account = nil
+        }
 
         let handlers = notificationHandlers ?? [BellNotificationHandler()]
         notifyService = NotifyService(handlers: handlers, options: options)
@@ -46,7 +52,7 @@ public struct LiveTimingDependencies: @unchecked Sendable {
         liveTimingClient = LiveTimingClient(
             timingService: timingService,
             options: options,
-            formula1Account: formula1Account
+            formula1Account: self.formula1Account
         )
     }
 }
