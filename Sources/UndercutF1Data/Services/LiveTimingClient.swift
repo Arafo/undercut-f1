@@ -33,9 +33,15 @@ public actor LiveTimingClient {
     private var task: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
     private var reconnectTask: Task<Void, Never>?
+    private var pingTask: Task<Void, Never>?
     private var sessionKey: String = "UnknownSession"
     private var invocationId: String = UUID().uuidString
     private var backoffSeconds: TimeInterval = 2
+    private var isRunning = false
+    private let subscribedTopics = Set(LiveTimingClient.topics)
+    private let backPressureWatermark = 400
+    private let backPressureBaseDelay: TimeInterval = 0.1
+    private let backPressureMultiplierLimit: Double = 4
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let handshake = "{\"protocol\":\"json\",\"version\":1}\u{1e}"
@@ -60,14 +66,18 @@ public actor LiveTimingClient {
     }
 
     public func start() async {
+        isRunning = true
         await timingService.start()
         await establishConnection()
     }
 
     public func stop() {
+        isRunning = false
         receiveTask?.cancel()
         reconnectTask?.cancel()
         reconnectTask = nil
+        pingTask?.cancel()
+        pingTask = nil
         if let task {
             task.cancel(with: .goingAway, reason: nil)
         }
@@ -76,8 +86,11 @@ public actor LiveTimingClient {
     }
 
     private func establishConnection() async {
+        guard isRunning else { return }
         reconnectTask?.cancel()
         reconnectTask = nil
+        pingTask?.cancel()
+        pingTask = nil
 
         var components = URLComponents(string: "wss://livetiming.formula1.com/signalrcore")!
         if let token = formula1Account?.accessToken, !token.isEmpty {
@@ -93,6 +106,7 @@ public actor LiveTimingClient {
             try await send(text: handshake)
             try await sendSubscribe()
             listen()
+            startPingLoop()
             backoffSeconds = 2
         } catch {
             scheduleReconnect(after: backoffSeconds)
@@ -131,6 +145,7 @@ public actor LiveTimingClient {
             do {
                 let message = try await task.receive()
                 await handle(message: message)
+                await applyBackpressureIfNeeded()
             } catch {
                 await handleReceiveError(error)
                 break
@@ -186,6 +201,7 @@ public actor LiveTimingClient {
             return
         }
         guard case let .string(type) = arguments[0] else { return }
+        guard subscribedTopics.contains(type) else { return }
         let payloadValue = arguments[1]
         let payloadData = try encoder.encode(payloadValue)
         guard let payload = String(data: payloadData, encoding: .utf8) else { return }
@@ -271,10 +287,13 @@ public actor LiveTimingClient {
 
     private func handleReceiveError(_ error: Error) async {
         print("Live timing client receive error: \(error)")
+        pingTask?.cancel()
+        pingTask = nil
         scheduleReconnect(after: backoffSeconds)
     }
 
     private func scheduleReconnect(after delay: TimeInterval) {
+        guard isRunning else { return }
         reconnectTask?.cancel()
         reconnectTask = Task { [weak self] in
             guard let self else { return }
@@ -282,6 +301,44 @@ public actor LiveTimingClient {
             await self.establishConnection()
         }
         backoffSeconds = min(delay * 2, 120)
+    }
+
+    private func startPingLoop() {
+        pingTask?.cancel()
+        pingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                guard !Task.isCancelled else { break }
+                guard let self else { break }
+                do {
+                    try await self.sendPing()
+                } catch {
+                    await self.handleReceiveError(error)
+                    break
+                }
+            }
+        }
+    }
+
+    private func sendPing() async throws {
+        guard let task else { throw LiveTimingError.notConnected }
+        try await withCheckedThrowingContinuation { continuation in
+            task.sendPing { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
+    }
+
+    private func applyBackpressureIfNeeded() async {
+        let queueDepth = await timingService.getRemainingWorkItems()
+        guard queueDepth >= backPressureWatermark else { return }
+        let multiplier = min(Double(queueDepth) / Double(backPressureWatermark), backPressureMultiplierLimit)
+        let delay = backPressureBaseDelay * multiplier
+        try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
     }
 }
 

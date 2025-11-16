@@ -89,8 +89,16 @@ public actor TimingService {
 
         if type.hasSuffix(".z") {
             type = String(type.dropLast(2))
+            guard
+                let encoded = try? JSONValue.parse(from: data),
+                let compressedPayload = encoded.stringValue
+            else {
+                print("Failed to decode compressed payload wrapper for type \(type)")
+                return
+            }
+
             do {
-                data = try CompressionUtilities.inflateBase64Data(data)
+                data = try CompressionUtilities.inflateBase64Data(compressedPayload)
             } catch {
                 print("Failed to decompress payload for type \(type): \(error)")
                 return
