@@ -73,3 +73,13 @@ This document catalogues the terminal capabilities expected by the existing C# c
 5. Proper handling of ANSI CSI + FE escape sequences for keyboard input.
 6. Ability to flush binary graphics payloads (sixel) post frame.
 7. Layout primitives supporting rows, columns, panels, tables, charts, log views, and status panels.
+
+## Swift Implementation Gap Notes
+
+Tracking how closely the Swift port follows the behaviour above makes it easier to plan the next round of work. Reviewing `swift/UndercutF1Terminal/Sources/UndercutF1Terminal/ConsoleLoop.swift` and its collaborators surfaces a few remaining gaps:
+
+- **Input polling blocks the frame cadence** – `ConsoleLoop.run` awaits `inputRouter.pollInput` before any rendering occurs, and `InputRouter.pollInput` always awaits `TerminalProtocol.readInput`. Unlike the Spectre loop (which only reads when `Console.KeyAvailable` says data exists), the Swift version therefore suspends the entire frame whenever no keys are pressed. A non-blocking poll or timeout-aware read is needed to keep the 150 ms cadence intact.
+- **Shutdown is never triggered from the UI state** – `EscapeInputHandler` updates `State.currentScreen` to `.shutdown`, but `ConsoleLoop` only evaluates the cancellation token to exit. As a result, the Swift loop keeps diffing and drawing the fallback “Unknown Display Selected: shutdown” screen instead of unwinding terminal state when the user presses <kbd>q</kbd> / <kbd>Esc</kbd> on the home screen.
+- **Error surface is a stub** – Spectre renders a bordered panel sized to the terminal height minus the footer, whereas the Swift `ErrorPanel` just prints two lines of plain text without reserving footer space. Keeping a structured error layout (with the footer height baked in) ensures parity with the documented lifecycle and keeps the footer area clear for future state reporting.
+
+These items should be addressed before declaring the Swift console loop behaviour-complete.
