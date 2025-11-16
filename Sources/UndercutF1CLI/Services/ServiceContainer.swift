@@ -1,5 +1,6 @@
 import Foundation
 import Logging
+import UndercutF1Data
 
 struct ServiceContainer: Sendable {
     let options: ResolvedConsoleOptions
@@ -12,6 +13,19 @@ struct ServiceContainer: Sendable {
         self.logger = logger
         self.clipboard = clipboard
         self.httpClient = httpClient
+    }
+}
+
+extension ResolvedConsoleOptions {
+    func liveTimingOptions() -> LiveTimingOptions {
+        LiveTimingOptions(
+            dataDirectory: dataDirectory,
+            logDirectory: logDirectory,
+            apiEnabled: apiEnabled,
+            verbose: verbose,
+            notify: notify,
+            formula1AccessToken: formula1AccessToken
+        )
     }
 }
 

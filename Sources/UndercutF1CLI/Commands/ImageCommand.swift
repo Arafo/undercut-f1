@@ -21,6 +21,13 @@ struct ImageCommand: AsyncParsableCommand {
         let services = builder.bootstrap(commandLine: global.asConsoleOptions())
         let url = URL(fileURLWithPath: file)
         services.logger.info("Requested image render using \(graphicsProtocol.rawValue) for file \(url.path)")
-        services.logger.notice("Terminal graphics emission is not yet implemented in Swift.")
+
+        let renderer = ImageRenderer()
+        do {
+            try renderer.render(file: url, using: graphicsProtocol)
+        } catch {
+            services.logger.error("Failed to render image: \(error.localizedDescription)")
+            throw error
+        }
     }
 }
