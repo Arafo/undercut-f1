@@ -43,6 +43,7 @@ struct ConfigurationLoader {
         options.notify = bool(for: "UNDERCUTF1_NOTIFY")
         options.dataDirectory = env["UNDERCUTF1_DATADIRECTORY"]
         options.logDirectory = env["UNDERCUTF1_LOGDIRECTORY"]
+        options.formula1AccessToken = env["UNDERCUTF1_FORMULA1ACCESSTOKEN"]
         options.preferFfmpegPlayback = bool(for: "UNDERCUTF1_PREFERFFMPEGPLAYBACK")
         if let protocolValue = env["UNDERCUTF1_FORCEGRAPHICSPROTOCOL"],
            let protocolOption = GraphicsProtocol(argument: protocolValue) {
