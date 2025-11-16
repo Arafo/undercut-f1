@@ -1,0 +1,37 @@
+[
+  {
+    "data": "{\"Utc\":\"2024-05-04T20:00:00Z\"}",
+    "timestamp": "2024-04-18T16:00:00Z",
+    "type": "Heartbeat"
+  },
+  {
+    "data": "{\"Lines\":{\"1\":{\"BestLapTime\":\"1:18.123\"}}}",
+    "timestamp": "2024-04-18T16:00:00Z",
+    "type": "TimingStats"
+  },
+  {
+    "data": "{\"Drivers\":{\"1\":{\"RacingNumber\":\"1\",\"BroadcastName\":\"VER\"}}}",
+    "timestamp": "2024-04-18T16:00:00Z",
+    "type": "DriverList"
+  },
+  {
+    "data": "{\"Lines\":{\"1\":{\"Line\":1,\"GapToLeader\":\"+0.000\"}}}",
+    "timestamp": "2024-04-18T16:00:00Z",
+    "type": "TimingData"
+  },
+  {
+    "data": "{\"Messages\":[{\"Id\":\"1\",\"Transcription\":\"Box, box\"}]}",
+    "timestamp": "2024-04-18T16:00:00Z",
+    "type": "TeamRadio"
+  },
+  {
+    "data": "\"VGVzdENhckRhdGE=\"",
+    "timestamp": "2024-04-18T16:00:00Z",
+    "type": "CarData.z"
+  },
+  {
+    "data": "\"VGVzdFBvc2l0aW9uRGF0YQ==\"",
+    "timestamp": "2024-04-18T16:00:00Z",
+    "type": "Position.z"
+  }
+]

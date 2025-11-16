@@ -46,7 +46,10 @@ let package = Package(
         .testTarget(
             name: "UndercutF1DataTests",
             dependencies: ["UndercutF1Data"],
-            path: "Tests/UndercutF1DataTests"
+            path: "Tests/UndercutF1DataTests",
+            resources: [
+                .process("Fixtures")
+            ]
         ),
     ]
 )

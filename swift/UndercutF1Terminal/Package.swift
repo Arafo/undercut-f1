@@ -27,7 +27,10 @@ let package = Package(
         .testTarget(
             name: "UndercutF1TerminalTests",
             dependencies: ["UndercutF1Terminal"],
-            path: "Tests/UndercutF1TerminalTests"
+            path: "Tests/UndercutF1TerminalTests",
+            resources: [
+                .process("Fixtures")
+            ]
         ),
     ]
 )
