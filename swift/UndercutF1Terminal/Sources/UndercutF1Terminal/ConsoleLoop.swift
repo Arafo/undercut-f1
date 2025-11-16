@@ -51,8 +51,8 @@ public final class ConsoleLoop {
                 break
             }
 
+            let activeDisplay = displayRegistry.activeDisplay()
             do {
-                let activeDisplay = displayRegistry.activeDisplay()
                 let frame = try await renderFrame(using: activeDisplay)
                 let supportsSync = terminal.capabilities.supportsSynchronizedUpdates
                 if supportsSync {
@@ -71,7 +71,7 @@ public final class ConsoleLoop {
                     await terminal.endSynchronizedUpdate()
                 }
             } catch {
-                await render(error: error)
+                await render(error: error, screen: activeDisplay.screen)
             }
 
             let frameEnd = clock()
@@ -107,10 +107,11 @@ public final class ConsoleLoop {
         await terminalManager.restore()
     }
 
-    private func render(error: Error) async {
+    private func render(error: Error, screen: Screen) async {
         var buffer = ""
-        let panel = ErrorPanel(error: error, footerHeight: footerRenderer.footerHeight)
+        let panel = ErrorPanel(error: error, footerHeight: footerRenderer.footerHeight, screen: screen)
         panel.render(into: &buffer)
-        await terminal.write(buffer)
+        let normalized = buffer.replacingOccurrences(of: "\n", with: "\r\n")
+        await terminal.write(normalized)
     }
 }

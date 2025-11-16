@@ -147,9 +147,20 @@ extension Array {
 public struct ErrorPanel: RenderNode {
     let error: Error
     let footerHeight: Int
+    let screen: Screen
+
+    public init(error: Error, footerHeight: Int, screen: Screen) {
+        self.error = error
+        self.footerHeight = footerHeight
+        self.screen = screen
+    }
 
     public func render(into buffer: inout String) {
-        buffer.append("Failed to render screen\r\n")
+        buffer.append("Failed to render screen \(screen)\r\n")
         buffer.append(String(describing: error))
+        buffer.append("\r\n")
+        if footerHeight > 0 {
+            buffer.append(String(repeating: "\r\n", count: footerHeight))
+        }
     }
 }
